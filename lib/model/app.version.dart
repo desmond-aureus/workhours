@@ -12,7 +12,66 @@ class ProjectInfo {
   ProjectInfo({required this.code, required this.versions});
 }
 
+/// Each [ProjectInfo.versions] list is **newest release first** (required by
+/// [resolveVersionForProject]).
 final List<ProjectInfo> kProjects = [
+  ProjectInfo(
+    code: 'AAP',
+    versions: [
+      AppVersion(version: '6.3.7', releaseDate: DateTime(2026, 4, 22)),
+      AppVersion(version: '6.3.6', releaseDate: DateTime(2026, 4, 8)),
+      AppVersion(version: '6.3.5', releaseDate: DateTime(2026, 3, 25)),
+      AppVersion(version: '6.3.4', releaseDate: DateTime(2026, 3, 11)),
+      AppVersion(version: '6.3.3', releaseDate: DateTime(2026, 3, 5)),
+      AppVersion(version: '6.3.2', releaseDate: DateTime(2026, 3, 2)),
+      AppVersion(version: '6.3.1', releaseDate: DateTime(2026, 2, 25)),
+      AppVersion(version: '6.3.0', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '6.2.0', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '6.1.0', releaseDate: DateTime(2026, 1, 19)),
+    ],
+  ),
+  ProjectInfo(
+    code: 'ACA',
+    versions: [
+      AppVersion(version: '5.1.0', releaseDate: DateTime(2026, 4, 10)),
+      AppVersion(version: '5.0.5', releaseDate: DateTime(2026, 3, 30)),
+      AppVersion(version: '5.0.4', releaseDate: DateTime(2026, 3, 4)),
+      AppVersion(version: '5.0.3', releaseDate: DateTime(2026, 2, 10)),
+      AppVersion(version: '5.0.2', releaseDate: DateTime(2026, 1, 31)),
+      AppVersion(version: '5.0.1', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '5.0.0', releaseDate: DateTime(2026, 1, 9)),
+    ],
+  ),
+  ProjectInfo(
+    code: 'AEA',
+    versions: [
+      AppVersion(version: '3.0.4', releaseDate: DateTime(2026, 3, 5)),
+      AppVersion(version: '3.0.3', releaseDate: DateTime(2026, 2, 2)),
+      AppVersion(version: '3.0.2', releaseDate: DateTime(2026, 1, 27)),
+      AppVersion(version: '3.0.1', releaseDate: DateTime(2026, 1, 15)),
+      AppVersion(version: '3.0.0', releaseDate: DateTime(2026, 1, 6)),
+    ],
+  ),
+  ProjectInfo(
+    code: 'ALA',
+    versions: [
+      // 1.1.1 is after 1.1.2 by release date in source data
+      AppVersion(version: '1.1.1', releaseDate: DateTime(2026, 4, 22)),
+      AppVersion(version: '1.1.2', releaseDate: DateTime(2026, 4, 8)),
+      AppVersion(version: '1.0.11', releaseDate: DateTime(2026, 3, 11)),
+      AppVersion(version: '1.0.10', releaseDate: DateTime(2026, 3, 5)),
+      AppVersion(version: '1.0.9', releaseDate: DateTime(2026, 3, 2)),
+      AppVersion(version: '1.0.8', releaseDate: DateTime(2026, 2, 25)),
+      AppVersion(version: '1.0.7', releaseDate: DateTime(2026, 2, 11)),
+      AppVersion(version: '1.0.6', releaseDate: DateTime(2026, 2, 10)),
+      AppVersion(version: '1.0.5', releaseDate: DateTime(2026, 1, 29)),
+      AppVersion(version: '1.0.4', releaseDate: DateTime(2026, 1, 27)),
+      AppVersion(version: '1.0.3', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '1.0.2', releaseDate: DateTime(2026, 1, 21)),
+      AppVersion(version: '1.0.1', releaseDate: DateTime(2026, 1, 19)),
+      AppVersion(version: '1.0.0', releaseDate: DateTime(2026, 1, 5)),
+    ],
+  ),
   ProjectInfo(
     code: 'APA',
     versions: [
@@ -25,6 +84,49 @@ final List<ProjectInfo> kProjects = [
       AppVersion(version: '7.0.0', releaseDate: DateTime(2026, 1, 12)),
     ],
   ),
+  ProjectInfo(
+    code: 'ARA',
+    versions: [
+      AppVersion(version: '8.5.8', releaseDate: DateTime(2026, 4, 22)),
+      AppVersion(version: '8.5.7', releaseDate: DateTime(2026, 4, 8)),
+      AppVersion(version: '8.5.6', releaseDate: DateTime(2026, 3, 25)),
+      AppVersion(version: '8.5.5', releaseDate: DateTime(2026, 3, 11)),
+      AppVersion(version: '8.5.4', releaseDate: DateTime(2026, 3, 5)),
+      AppVersion(version: '8.5.3', releaseDate: DateTime(2026, 3, 2)),
+      AppVersion(version: '8.5.2', releaseDate: DateTime(2026, 2, 25)),
+      AppVersion(version: '8.5.1', releaseDate: DateTime(2026, 2, 11)),
+      AppVersion(version: '8.5.0', releaseDate: DateTime(2026, 2, 10)),
+      AppVersion(version: '8.3.0', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '8.2.0', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '8.1.0', releaseDate: DateTime(2026, 1, 19)),
+      // Listed with an earlier calendar date than 8.1.0 — order is by date
+      AppVersion(version: '8.4.0', releaseDate: DateTime(2026, 1, 9)),
+    ],
+  ),
+  ProjectInfo(
+    code: 'ASA',
+    versions: [
+      AppVersion(version: '2.0.2', releaseDate: DateTime(2026, 3, 5)),
+      AppVersion(version: '2.0.1', releaseDate: DateTime(2026, 1, 16)),
+      AppVersion(version: '2.0.0', releaseDate: DateTime(2026, 1, 7)),
+    ],
+  ),
+  ProjectInfo(
+    code: 'ASUA',
+    versions: [
+      AppVersion(version: '4.2.6', releaseDate: DateTime(2026, 3, 25)),
+      AppVersion(version: '4.2.5', releaseDate: DateTime(2026, 3, 11)),
+      AppVersion(version: '4.2.4', releaseDate: DateTime(2026, 3, 5)),
+      AppVersion(version: '4.2.3', releaseDate: DateTime(2026, 3, 2)),
+      AppVersion(version: '4.2.2', releaseDate: DateTime(2026, 2, 25)),
+      AppVersion(version: '4.2.1', releaseDate: DateTime(2026, 2, 10)),
+      AppVersion(version: '4.2.0', releaseDate: DateTime(2026, 1, 22)),
+      AppVersion(version: '4.1.0', releaseDate: DateTime(2026, 1, 13)),
+      AppVersion(version: '3.2.7', releaseDate: DateTime(2026, 1, 13)),
+    ],
+  ),
+  // No releases listed — always resolves to [kDefaultAppVersion]
+  ProjectInfo(code: 'SD', versions: []),
 ];
 
 /// Shown when the project is unknown or the row date is before any release.
