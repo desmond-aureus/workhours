@@ -89,6 +89,7 @@ class _HomePageState extends State<HomePage> {
   DateTime _startDate = DateTime(2025, 12, 29);
   List<WorkEntry> _entries = [];
   bool _parsed = false;
+  bool _parsing = false;
   String? _error;
   String _filterProject = 'All';
 
@@ -115,20 +116,26 @@ class _HomePageState extends State<HomePage> {
     if (picked != null) setState(() => _startDate = picked);
   }
 
-  void _parseData() {
+  Future<void> _parseData() async {
+    if (_parsing) return;
+
     setState(() {
+      _parsing = true;
       _error = null;
       _entries = [];
       _parsed = false;
     });
 
-    final text = _dataController.text;
-    if (text.trim().isEmpty) {
-      setState(() => _error = 'Please paste your spreadsheet data first.');
-      return;
-    }
+    // Yield so the frame can paint the loading state before heavy parsing.
+    await Future<void>.delayed(Duration.zero);
 
     try {
+      final text = _dataController.text;
+      if (text.trim().isEmpty) {
+        setState(() => _error = 'Please paste your spreadsheet data first.');
+        return;
+      }
+
       final result = parseWorkHoursData(text, _startDate);
       if (result.isEmpty) {
         setState(
@@ -144,6 +151,8 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _parsing = false);
     }
   }
 
@@ -319,12 +328,16 @@ class _HomePageState extends State<HomePage> {
           ],
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: _parseData,
-            icon: const Icon(Icons.play_arrow_rounded),
-            label: const Text('Parse Data'),
+            onPressed: _parsing ? null : _parseData,
+            icon: _parsing
+                ? const Icon(Icons.hourglass_bottom)
+                : const Icon(Icons.play_arrow_rounded),
+            label: Text(_parsing ? 'Parsing…' : 'Parse Data'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
+              disabledBackgroundColor: const Color(0xFF2563EB),
+              disabledForegroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
