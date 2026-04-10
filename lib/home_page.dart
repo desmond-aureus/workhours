@@ -4,6 +4,7 @@ import 'dart:html' as html;
 
 import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
+import 'package:workhours/model/app.version.dart';
 
 class WorkEntry {
   final DateTime date;
@@ -151,8 +152,16 @@ class _HomePageState extends State<HomePage> {
     if (data.isEmpty) return;
 
     final rows = <List<dynamic>>[
-      ['Date', 'Project', 'Code', 'Hours'],
-      ...data.map((e) => [formatDate(e.date), e.project, e.code, e.hours]),
+      ['Date', 'Project', 'Code', 'Hours', 'Version'],
+      ...data.map(
+        (e) => [
+          formatDate(e.date),
+          e.project,
+          e.code,
+          e.hours,
+          resolveVersionForProject(e.code, e.date),
+        ],
+      ),
     ];
 
     final csv = const ListToCsvConverter().convert(rows);
@@ -472,6 +481,12 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
+                  DataColumn(
+                    label: Text(
+                      'Version',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ],
                 rows: _filteredEntries
                     .map(
@@ -519,6 +534,11 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           ),
+                          DataCell(
+                            _VersionCell(
+                              resolveVersionForProject(e.code, e.date),
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -527,6 +547,36 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VersionCell extends StatelessWidget {
+  final String version;
+
+  const _VersionCell(this.version);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDefault = version == kDefaultAppVersion;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isDefault ? const Color(0xFFF3F4F6) : const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: isDefault ? Colors.grey.shade300 : const Color(0xFF86EFAC),
+        ),
+      ),
+      child: Text(
+        version,
+        style: TextStyle(
+          color: isDefault ? Colors.grey.shade600 : const Color(0xFF15803D),
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+          fontFamily: 'monospace',
+        ),
       ),
     );
   }
