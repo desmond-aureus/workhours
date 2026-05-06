@@ -11,16 +11,38 @@ class WorkEntry {
   final String project;
   final String code;
   final double hours;
+  final String projectId;
+  final String userId;
+  final String description;
 
   const WorkEntry({
     required this.date,
     required this.project,
     required this.code,
     required this.hours,
+    required this.projectId,
+    required this.userId,
+    required this.description,
   });
 }
 
-List<WorkEntry> parseWorkHoursData(String rawData, DateTime startDate) {
+const Map<String, String> kProjectIdsByCode = {
+  'ARA': '69d5b98ad1c4e48d24a0512f',
+  'AEA': '69d5b966d1c4e48d24a04fc0',
+  'AAP': '69d5b93aee474e289f61d998',
+  'APA': '69d5b919ee474e289f61d8cd',
+  'ASA': '69d5b8f0ee474e289f61d7af',
+  'ACA': '69d5b8b6d1c4e48d24a04889',
+  'ASUA': '69d5b888d1c4e48d24a042ac',
+  'ALA': '69d5b843ee474e289f61c835',
+};
+
+List<WorkEntry> parseWorkHoursData(
+  String rawData,
+  DateTime startDate, {
+  required String userId,
+  required String description,
+}) {
   final lines = rawData.split(RegExp(r'\r?\n')).toList();
 
   int headerRowIdx = -1;
@@ -52,6 +74,8 @@ List<WorkEntry> parseWorkHoursData(String rawData, DateTime startDate) {
     final code = cells[1].trim();
     if (projectName.isEmpty || code.isEmpty) continue;
 
+    final projectId = kProjectIdsByCode[code] ?? '';
+
     for (int j = 2; j < cells.length; j++) {
       final hoursStr = cells[j].trim();
       if (hoursStr.isEmpty) continue;
@@ -61,7 +85,15 @@ List<WorkEntry> parseWorkHoursData(String rawData, DateTime startDate) {
 
       final date = startDate.add(Duration(days: j - 2));
       entries.add(
-        WorkEntry(date: date, project: projectName, code: code, hours: hours),
+        WorkEntry(
+          date: date,
+          project: projectName,
+          code: code,
+          hours: hours,
+          projectId: projectId,
+          userId: userId,
+          description: description,
+        ),
       );
     }
   }
@@ -75,7 +107,7 @@ List<WorkEntry> parseWorkHoursData(String rawData, DateTime startDate) {
 }
 
 String formatDate(DateTime date) =>
-    '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -86,12 +118,20 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _dataController = TextEditingController();
+  final TextEditingController _userIdController = TextEditingController();
+  final TextEditingController _descriptionController =
+      TextEditingController(text: 'Initial import');
   DateTime _startDate = DateTime(2025, 12, 29);
   List<WorkEntry> _entries = [];
   bool _parsed = false;
   bool _parsing = false;
   String? _error;
   String _filterProject = 'All';
+
+  bool get _canParse =>
+      _dataController.text.trim().isNotEmpty &&
+      _userIdController.text.trim().isNotEmpty &&
+      _descriptionController.text.trim().isNotEmpty;
 
   List<String> get _projectNames {
     final names = _entries.map((e) => e.project).toSet().toList()..sort();
@@ -136,7 +176,12 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      final result = parseWorkHoursData(text, _startDate);
+      final result = parseWorkHoursData(
+        text,
+        _startDate,
+        userId: _userIdController.text.trim(),
+        description: _descriptionController.text.trim(),
+      );
       if (result.isEmpty) {
         setState(
           () => _error =
@@ -161,14 +206,26 @@ class _HomePageState extends State<HomePage> {
     if (data.isEmpty) return;
 
     final rows = <List<dynamic>>[
-      ['Date', 'Project', 'Code', 'Hours', 'Version'],
+      [
+        'Project ID',
+        'User ID',
+        'Code',
+        'Project Name',
+        'Track Date',
+        'Hours',
+        'Version',
+        'Description',
+      ],
       ...data.map(
         (e) => [
-          formatDate(e.date),
-          e.project,
+          e.projectId,
+          e.userId,
           e.code,
+          e.project,
+          formatDate(e.date),
           e.hours,
           resolveVersionForProject(e.code, e.date),
+          e.description,
         ],
       ),
     ];
@@ -242,6 +299,76 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Label('User ID'),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                      ),
+                      child: TextField(
+                        controller: _userIdController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Enter User ID (e.g. 6371ef58d7b9ab3108361561)',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _Label('Description'),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.white,
+                      ),
+                      child: TextField(
+                        controller: _descriptionController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Enter description for work entries',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
           _Label('Start Date (first day in the data)'),
           const SizedBox(height: 8),
           InkWell(
@@ -282,6 +409,7 @@ class _HomePageState extends State<HomePage> {
             ),
             child: TextField(
               controller: _dataController,
+              onChanged: (_) => setState(() {}),
               maxLines: 14,
               style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
               decoration: InputDecoration(
@@ -328,7 +456,7 @@ class _HomePageState extends State<HomePage> {
           ],
           const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: _parsing ? null : _parseData,
+            onPressed: (_parsing || !_canParse) ? null : _parseData,
             icon: _parsing
                 ? const Icon(Icons.hourglass_bottom)
                 : const Icon(Icons.play_arrow_rounded),
@@ -471,19 +599,31 @@ class _HomePageState extends State<HomePage> {
                 columns: const [
                   DataColumn(
                     label: Text(
-                      'Date',
+                      'Project ID',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                   DataColumn(
                     label: Text(
-                      'Project',
+                      'User ID',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                   DataColumn(
                     label: Text(
                       'Code',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Project Name',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  DataColumn(
+                    label: Text(
+                      'Track Date',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -500,6 +640,12 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
+                  DataColumn(
+                    label: Text(
+                      'Description',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ],
                 rows: _filteredEntries
                     .map(
@@ -507,14 +653,22 @@ class _HomePageState extends State<HomePage> {
                         cells: [
                           DataCell(
                             Text(
-                              formatDate(e.date),
+                              e.projectId,
                               style: const TextStyle(
                                 fontFamily: 'monospace',
-                                fontSize: 13,
+                                fontSize: 11,
                               ),
                             ),
                           ),
-                          DataCell(Text(e.project)),
+                          DataCell(
+                            Text(
+                              e.userId,
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
                           DataCell(
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -536,6 +690,16 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           ),
+                          DataCell(Text(e.project)),
+                          DataCell(
+                            Text(
+                              formatDate(e.date),
+                              style: const TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
                           DataCell(
                             Text(
                               e.hours % 1 == 0
@@ -550,6 +714,12 @@ class _HomePageState extends State<HomePage> {
                           DataCell(
                             _VersionCell(
                               resolveVersionForProject(e.code, e.date),
+                            ),
+                          ),
+                          DataCell(
+                            Text(
+                              e.description,
+                              style: const TextStyle(fontSize: 13),
                             ),
                           ),
                         ],
