@@ -146,6 +146,25 @@ class _HomePageState extends State<HomePage> {
   double get _totalHours =>
       _filteredEntries.fold(0.0, (sum, e) => sum + e.hours);
 
+  /// Distinct **PROJECT** column values in the current import only (sorted).
+  List<String> get _projectsInImport {
+    final names = _entries.map((e) => e.project).toSet().toList()..sort();
+    return names;
+  }
+
+  /// [ProjectInfo] for a project row: [projectName] as catalog code, else any
+  /// [WorkEntry.code] seen under that project in this import.
+  ProjectInfo? _catalogForImportedProject(String projectName) {
+    final direct = catalogForProjectCode(projectName);
+    if (direct != null) return direct;
+    for (final e in _entries) {
+      if (e.project != projectName) continue;
+      final c = catalogForProjectCode(e.code);
+      if (c != null) return c;
+    }
+    return null;
+  }
+
   Future<void> _pickStartDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -261,20 +280,29 @@ class _HomePageState extends State<HomePage> {
         ),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInputCard(theme, cs),
-            if (_parsed && _entries.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              _buildStatsRow(),
-              const SizedBox(height: 24),
-              _buildResultsCard(theme),
-            ],
-          ],
-        ),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInputCard(theme, cs),
+                  if (_parsed && _entries.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    _buildStatsRow(),
+                    const SizedBox(height: 24),
+                    _buildResultsCard(theme),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (_parsed && _entries.isNotEmpty)
+            _buildReleaseCatalogSidebar(theme),
+        ],
       ),
     );
   }
@@ -730,6 +758,161 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Right rail: one block per distinct **PROJECT** in the import only.
+  Widget _buildReleaseCatalogSidebar(ThemeData theme) {
+    final projects = _projectsInImport;
+
+    return Material(
+      color: Colors.white,
+      child: SizedBox(
+        width: 300,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: Colors.grey.shade200)),
+            color: Colors.white,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                color: const Color(0xFF1E40AF),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.new_releases_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Projects in this import',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: projects.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 18),
+                  itemBuilder: (context, i) {
+                    final projectName = projects[i];
+                    final catalog = _catalogForImportedProject(projectName);
+                    final versions = catalog == null
+                        ? const <AppVersion>[]
+                        : (List<AppVersion>.from(catalog.versions)
+                          ..sort(
+                            (a, b) =>
+                                a.releaseDate.compareTo(b.releaseDate),
+                          ));
+                    final codesInProject = _entries
+                        .where((e) => e.project == projectName)
+                        .map((e) => e.code)
+                        .toSet()
+                        .toList()
+                      ..sort();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7C3AED).withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            projectName,
+                            style: const TextStyle(
+                              color: Color(0xFF7C3AED),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        if (codesInProject.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            codesInProject.length == 1
+                                ? 'Code: ${codesInProject.first}'
+                                : 'Codes: ${codesInProject.join(', ')}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade700,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        if (catalog == null)
+                          Text(
+                            'No release catalog for this project.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          )
+                        else if (versions.isEmpty)
+                          Text(
+                            'No releases listed.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          )
+                        else
+                          ...versions.map(
+                            (v) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'v${v.version}',
+                                      style: const TextStyle(
+                                        fontFamily: 'monospace',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    formatDate(v.releaseDate),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

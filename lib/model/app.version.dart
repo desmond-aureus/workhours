@@ -12,8 +12,8 @@ class ProjectInfo {
   ProjectInfo({required this.code, required this.versions});
 }
 
-/// Each [ProjectInfo.versions] list is **newest release first** (required by
-/// [resolveVersionForProject]).
+/// [ProjectInfo.versions] order does not matter; [resolveVersionForProject]
+/// sorts by date internally.
 final List<ProjectInfo> kProjects = [
   ProjectInfo(
     code: 'AAP',
@@ -55,9 +55,8 @@ final List<ProjectInfo> kProjects = [
   ProjectInfo(
     code: 'ALA',
     versions: [
-      // 1.1.1 is after 1.1.2 by release date in source data
-      AppVersion(version: '1.1.1', releaseDate: DateTime(2026, 4, 22)),
-      AppVersion(version: '1.1.2', releaseDate: DateTime(2026, 4, 8)),
+      AppVersion(version: '1.1.2', releaseDate: DateTime(2026, 4, 22)),
+      AppVersion(version: '1.1.1', releaseDate: DateTime(2026, 4, 8)),
       AppVersion(version: '1.0.11', releaseDate: DateTime(2026, 3, 11)),
       AppVersion(version: '1.0.10', releaseDate: DateTime(2026, 3, 5)),
       AppVersion(version: '1.0.9', releaseDate: DateTime(2026, 3, 2)),
@@ -138,35 +137,49 @@ final Map<String, ProjectInfo> _projectsByCode = {
   for (final p in kProjects) p.code: p,
 };
 
+/// Release catalog for [code], or null if [code] is not in [kProjects].
+ProjectInfo? catalogForProjectCode(String code) => _projectsByCode[code];
+
 DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
-/// Calendar compare: [a] and [b] are treated as dates only (year/month/day).
-/// Returns true iff [a] is on or before [b].
-bool _isOnOrBeforeCalendar(DateTime a, DateTime b) {
+/// Compares calendar dates only: negative if [a] < [b], zero if same day, positive if [a] > [b].
+int _calendarCompare(DateTime a, DateTime b) {
   final ay = a.year, am = a.month, ad = a.day;
   final by = b.year, bm = b.month, bd = b.day;
-  if (ay != by) return ay < by;
-  if (am != bm) return am < bm;
-  return ad <= bd;
+  if (ay != by) return ay.compareTo(by);
+  if (am != bm) return am.compareTo(bm);
+  return ad.compareTo(bd);
 }
 
 /// Maps a work row to an app version using [kProjects].
 ///
-/// [projectCode] must match [ProjectInfo.code] (e.g. spreadsheet "PROJECT" column).
-/// Picks the latest [AppVersion] whose [releaseDate] is on or before [date]
-/// (i.e. the version that was current once that release shipped). If [date] is
-/// strictly before every release, or the project is not listed, returns [kDefaultAppVersion].
+/// [projectCode] must match [ProjectInfo.code] (e.g. spreadsheet Code column).
 ///
-/// [versions] in each project should be ordered newest-first.
+/// Uses **next release** semantics: the first listed release whose date is
+/// **strictly after** the work date (the version you are building toward).
+/// If the work date is **on or after** the last release in the catalog, the
+/// **last** version is returned (latest shipped).
+///
+/// If the project is not listed or has no releases, returns [kDefaultAppVersion].
 String resolveVersionForProject(String projectCode, DateTime date) {
   final project = _projectsByCode[projectCode];
   if (project == null) return kDefaultAppVersion;
+  if (project.versions.isEmpty) return kDefaultAppVersion;
 
   final d = _dateOnly(date);
-  for (final v in project.versions) {
-    if (_isOnOrBeforeCalendar(v.releaseDate, d)) {
+  final sorted = List<AppVersion>.from(project.versions)
+    ..sort(
+      (a, b) => _calendarCompare(
+        _dateOnly(a.releaseDate),
+        _dateOnly(b.releaseDate),
+      ),
+    );
+
+  for (final v in sorted) {
+    final r = _dateOnly(v.releaseDate);
+    if (_calendarCompare(r, d) > 0) {
       return v.version;
     }
   }
-  return kDefaultAppVersion;
+  return sorted.last.version;
 }
